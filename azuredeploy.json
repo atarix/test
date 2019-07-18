@@ -1,0 +1,45 @@
+{
+  "properties": {
+    "displayName": "NSWPF Policy: Enforce locations",
+    "policyType": "Custom",
+    "mode": "Indexed",
+    "description": "This policy enables you to restrict the locations your organization can specify when deploying resources. Use to enforce your geo-compliance requirements. Excludes resource groups, Microsoft.AzureActiveDirectory/b2cDirectories, and resources that use the 'global' region.",
+    "metadata": {
+      "category": "Azure Governance"
+    },
+    "parameters": {
+      "listOfAllowedLocations": {
+        "type": "Array",
+        "metadata": {
+          "displayName": "Allowed locations",
+          "description": "The list of locations that can be specified when deploying resources.",
+          "strongType": "location"
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "location",
+            "notIn": "[parameters('listOfAllowedLocations')]"
+          },
+          {
+            "field": "location",
+            "notEquals": "global"
+          },
+          {
+            "field": "type",
+            "notEquals": "Microsoft.AzureActiveDirectory/b2cDirectories"
+          }
+        ]
+      },
+      "then": {
+        "effect": "deny"
+      }
+    }
+  },
+  "id": "/subscriptions/7d121b77-672c-46d8-b5b7-37391f2b4836/providers/Microsoft.Authorization/policyDefinitions/eaa76678-fc68-4ce1-b92a-4a0db44b42de",
+  "type": "Microsoft.Authorization/policyDefinitions",
+  "name": "eaa76678-fc68-4ce1-b92a-4a0db44b42de"
+}
