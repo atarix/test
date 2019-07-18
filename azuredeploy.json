@@ -1,45 +1,78 @@
 {
-  "properties": {
-    "displayName": "NSWPF Policy: Enforce locations",
-    "policyType": "Custom",
-    "mode": "Indexed",
-    "description": "This policy enables you to restrict the locations your organization can specify when deploying resources. Use to enforce your geo-compliance requirements. Excludes resource groups, Microsoft.AzureActiveDirectory/b2cDirectories, and resources that use the 'global' region.",
-    "metadata": {
-      "category": "Azure Governance"
-    },
+    "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
     "parameters": {
-      "listOfAllowedLocations": {
-        "type": "Array",
-        "metadata": {
-          "displayName": "Allowed locations",
-          "description": "The list of locations that can be specified when deploying resources.",
-          "strongType": "location"
+        "vNetId": {
+            "type": "string"
         }
-      }
     },
-    "policyRule": {
-      "if": {
-        "allOf": [
-          {
-            "field": "location",
-            "notIn": "[parameters('listOfAllowedLocations')]"
-          },
-          {
-            "field": "location",
-            "notEquals": "global"
-          },
-          {
-            "field": "type",
-            "notEquals": "Microsoft.AzureActiveDirectory/b2cDirectories"
-          }
-        ]
-      },
-      "then": {
-        "effect": "deny"
-      }
+    "variables": {
+        "singleQuote": "'",
+        "virtualNetworkId" : "[concat('[concat(parameters(', variables('singleQuote') ,'virtualNetworkId', variables('singleQuote'), '),', variables('singleQuote'), '*', variables('singleQuote') ,')]')]"
+    },
+    "resources": [
+        {
+            "name": "vm-creation-in-approved-vnet-definition",
+            "type": "Microsoft.Authorization/policyDefinitions",
+            "apiVersion": "2018-03-01",
+            "properties": {
+                "displayName" : "Use approved vNet for VM network interfaces",
+                "policyType": "Custom",
+                "mode": "All",
+                "description" : "Use approved vNet for VM network interfaces",
+                "parameters": {
+                    "virtualNetworkId": {
+                        "type": "string",
+                        "metadata": {
+                            "description": "Resource Id for the vNet",
+                            "displayName": "vNet Id"
+                        }
+                    }
+                },
+                 "policyRule": {
+                    "if": {
+                        "allOf": [
+                            {
+                                "field": "type",
+                                "equals": "Microsoft.Network/networkInterfaces"
+                            },
+                            {
+                                "not": {
+                                    "field": "Microsoft.Network/networkInterfaces/ipconfigurations[*].subnet.id",
+                                    "like": "[variables('virtualNetworkId')]"
+                                }
+                            }
+                        ]
+                    },
+                    "then": {
+                        "effect": "deny"
+                    }
+                }
+            }
+        },
+        {
+            "name": "vm-creation-in-approved-vnet-assignment",
+            "type": "Microsoft.Authorization/policyAssignments",
+            "apiVersion": "2018-03-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Authorization/policyDefinitions/', 'vm-creation-in-approved-vnet-definition')]"
+            ],
+            "properties": {
+                "displayName" : "Use approved vNet for VM network interfaces",
+                "description" : "Use approved vNet for VM network interfaces",
+                "metadata" : {
+                    "assignedBy" : "Admin"
+                },
+                "scope": "[subscription().id]",
+                "policyDefinitionId": "[resourceId('Microsoft.Authorization/policyDefinitions', 'vm-creation-in-approved-vnet-definition')]",
+                "parameters" : {
+                    "virtualNetworkId" : {
+                        "value": "[parameters('vNetId')]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
     }
-  },
-  "id": "/subscriptions/7d121b77-672c-46d8-b5b7-37391f2b4836/providers/Microsoft.Authorization/policyDefinitions/eaa76678-fc68-4ce1-b92a-4a0db44b42de",
-  "type": "Microsoft.Authorization/policyDefinitions",
-  "name": "eaa76678-fc68-4ce1-b92a-4a0db44b42de"
 }
